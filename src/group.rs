@@ -41,6 +41,7 @@ pub fn get_duplicate_groups(
             }
         }
 
+        // Filter out sub-threshold matching files
         let mut matching_threshold_files = HashSet::with_capacity(files.len());
         for file_match in matches {
             if file_match.percentage >= min_match_percentage {
