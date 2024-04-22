@@ -1,6 +1,8 @@
 mod group;
 
-use anyhow::Result;
+use std::{fs, process::Command};
+
+use anyhow::{anyhow, Result};
 use group::{get_duplicate_groups, Group};
 
 fn main() -> Result<()> {
@@ -9,28 +11,24 @@ fn main() -> Result<()> {
         &r"D:\Google Takeout Processing\shared-and-zach.dupeguru".to_string(),
         99,
     )?;
-    // dbg!(groups.len());
-    // let file_count: usize = groups.iter().map(|group| group.files_by_size.len()).sum();
-    // dbg!(file_count);
-    for group in groups {
-        if group.files_by_size.iter().any(|f| {
-            let mut ext1 = f.split('.').last().unwrap().to_lowercase();
-            let mut ext2 = group.files_by_size[0]
-                .split('.')
-                .last()
-                .unwrap()
-                .to_lowercase();
-            if ext1 == "jpeg" {
-                ext1 = "jpg".to_string();
-            }
-            if ext2 == "jpeg" {
-                ext2 = "jpg".to_string();
-            }
 
-            ext1 != ext2
-        }) {
-            dbg!(group);
-        }
+    let groups = groups
+        .into_iter()
+        .filter(|group| group.files.iter().all(is_jpeg));
+
+    for group in groups {
+        let (largest_file_index, largest_file) = group
+            .files
+            .iter()
+            .enumerate()
+            .max_by_key(|&(_, path)| get_file_size(path))
+            .ok_or(anyhow!("Empty group"))?;
+
+        let mut other_files: Vec<&String> = group.files.iter().collect();
+        other_files.remove(largest_file_index);
+        other_files.sort_unstable_by_key(|&path| get_metadata_size(path));
+
+        
     }
 
     // Merge metadata into largest file copy
@@ -39,6 +37,23 @@ fn main() -> Result<()> {
     // Store albums in text files
 
     Ok(())
+}
+
+fn is_jpeg(path: &String) -> bool {
+    path.ends_with(".jpeg") || path.ends_with(".jpg")
+}
+
+fn get_file_size(path: &String) -> u64 {
+    fs::metadata(path).expect("Failed to get metadata").len()
+}
+
+fn get_metadata_size(path: &String) -> usize {
+    let metadata = Command::new("exiftool")
+        .arg("-v")
+        .arg(path)
+        .output()
+        .expect("Failed to get exif data");
+    metadata.stdout.len()
 }
 
 fn merge_metadata(group: &Group) {}

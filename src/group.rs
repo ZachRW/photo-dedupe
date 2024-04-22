@@ -55,7 +55,7 @@ pub fn get_duplicate_groups(
             .collect();
 
         if !matching_threshold_files.is_empty() {
-            groups.push(Group::new(matching_threshold_files)?);
+            groups.push(Group::new(matching_threshold_files));
         }
     }
 
@@ -64,24 +64,12 @@ pub fn get_duplicate_groups(
 
 #[derive(Debug)]
 pub struct Group {
-    pub files_by_size: Vec<String>,
+    pub files: Vec<String>,
 }
 
 impl Group {
-    pub fn new(files: Vec<String>) -> Result<Self> {
-        let mut files_with_sizes: Vec<(String, u64)> = Vec::with_capacity(files.len());
-        for file in files.into_iter() {
-            let size = fs::metadata(&file)?.len();
-            files_with_sizes.push((file, size));
-        }
-
-        files_with_sizes.sort_unstable_by_key(|(_, size)| *size);
-        let sorted_files: Vec<String> =
-            files_with_sizes.into_iter().map(|(file, _)| file).collect();
-
-        Ok(Group {
-            files_by_size: sorted_files,
-        })
+    pub fn new(files: Vec<String>) -> Self {
+        Group { files }
     }
 }
 
